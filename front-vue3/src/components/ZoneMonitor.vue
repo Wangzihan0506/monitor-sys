@@ -10,10 +10,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, h } from 'vue'
 import * as cocoSsd from '@tensorflow-models/coco-ssd'
 import '@tensorflow/tfjs'
 import { ElMessage } from 'element-plus'
+import { alarmNotify } from '@/utils/alarmNotify'
 
 const video = ref(null)
 const canvas = ref(null)
@@ -22,6 +23,7 @@ let ctx = null
 let model = null
 let zoneRect = null
 let isDetecting = false
+let hasAlarmed = false // 防止重复弹窗
 
 onMounted(async () => {
   await nextTick()
@@ -120,6 +122,17 @@ async function detectFrame() {
     if (pred.class === 'person') {
       const color = isIntersectingZone(pred.bbox) ? 'red' : 'green'
       drawRect(pred.bbox, pred.class + ' ' + Math.round(pred.score * 100) + '%', color)
+      // 进入违规区域时弹窗
+      if (isIntersectingZone(pred.bbox) && !hasAlarmed) {
+        hasAlarmed = true
+        alarmNotify({
+          title: '告警',
+          message: h('div', '进入违规区域'),
+          type: 'error',
+          duration: 4000
+        })
+        setTimeout(() => { hasAlarmed = false }, 5000)
+      }
     }
   })
 
