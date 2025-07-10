@@ -3,8 +3,8 @@
     <div id="controls">
       <el-button type="primary" @click="enableDrawZone">绘制监控区域</el-button>
     </div>
-    <video ref="video" width="640" height="480" autoplay muted></video>
-    <canvas ref="canvas" width="640" height="480"></canvas>
+    <video ref="video" autoplay muted></video>
+    <canvas ref="canvas"></canvas>
     <div ref="zone" id="zone"></div>
   </div>
 </template>
@@ -24,21 +24,35 @@ let zoneRect = null
 let isDetecting = false
 
 onMounted(async () => {
-  await nextTick() // 确保 DOM 已挂载
+  await nextTick()
+  video.value.addEventListener('loadedmetadata', () => {
+    // 这里设置的是 canvas 的“属性”宽高，保证绘制不变形
+    canvas.value.width = video.value.videoWidth
+    canvas.value.height = video.value.videoHeight
+  })
   ctx = canvas.value.getContext('2d')
 
   const cameraReady = await setupCamera()
   if (!cameraReady) return
 
   model = await cocoSsd.load()
+  console.log('model loaded', model)
 
-  // 等待 video 加载完成后再开始识别
-  video.value.addEventListener('loadeddata', () => {
+  // 直接判断 video 是否 ready，直接启动 detectFrame
+  if (video.value.readyState >= 2) { // HAVE_CURRENT_DATA
     if (!isDetecting) {
       isDetecting = true
       detectFrame()
     }
-  })
+  } else {
+    video.value.addEventListener('loadeddata', () => {
+      console.log('video loadeddata')
+      if (!isDetecting) {
+        isDetecting = true
+        detectFrame()
+      }
+    })
+  }
 })
 
 async function setupCamera() {
@@ -57,6 +71,7 @@ async function setupCamera() {
 }
 
 function drawRect([x, y, width, height], label, color = 'green') {
+  if (!ctx) return
   ctx.strokeStyle = color
   ctx.lineWidth = 2
   ctx.strokeRect(x, y, width, height)
@@ -82,12 +97,23 @@ function isIntersectingZone(box) {
 }
 
 async function detectFrame() {
+  console.log('detectFrame running')
   if (!video.value || video.value.readyState !== 4) {
     requestAnimationFrame(detectFrame)
     return
   }
-
+  if (!model) {
+    console.log('模型未加载')
+    requestAnimationFrame(detectFrame)
+    return
+  }
+  if (!video.value.srcObject) {
+    console.log('摄像头未就绪')
+    requestAnimationFrame(detectFrame)
+    return
+  }
   const predictions = await model.detect(video.value)
+  console.log('predictions:', predictions)
   ctx.clearRect(0, 0, canvas.value.width, canvas.value.height)
 
   predictions.forEach(pred => {
@@ -142,22 +168,29 @@ function enableDrawZone() {
   position: relative;
   width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
 }
 
 video,
-canvas {
+canvas,
+#zone {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+}
+
+video {
+  z-index: 1;
   object-fit: cover;
 }
 
+canvas {
+  z-index: 2;
+}
+
 #zone {
-  position: absolute;
+  z-index: 3;
   border: 2px dashed red;
   pointer-events: none;
 }
