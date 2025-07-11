@@ -4,7 +4,7 @@
             <!-- 标题区 -->
             <div class="login-header">
                 <h2 class="login-title">
-                    {{ resetPasswordShow ? '忘记密码' : '员工签到和行为检测管理系统' }}
+                    {{ resetPasswordShow ? '忘记密码' : '餐厅员工签到和行为检测管理系统' }}
                 </h2>
                 <p v-if="tipMsg" class="tip-msg" v-html="tipMsg" />
             </div>
