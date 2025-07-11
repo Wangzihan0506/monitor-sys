@@ -821,3 +821,15 @@ def list_behavior_recognitions():
         "items": items,
         "total": pagination.total
     }), 200
+
+@api_bp.route('/behaviorRecognition/<int:id>', methods=['DELETE'])
+def delete_behavior_recognition(id):
+    """
+    删除指定ID的行为识别（告警中心）记录
+    """
+    behavior = Behavior.query.get(id)
+    if not behavior:
+        return jsonify({"message": "记录不存在"}), 404
+    db.session.delete(behavior)
+    db.session.commit()
+    return jsonify({"message": "删除成功"}), 200
