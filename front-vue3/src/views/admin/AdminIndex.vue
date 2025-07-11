@@ -74,7 +74,12 @@
                     </el-menu-item>
                     <el-menu-item index="behaviorRecognition">
                         <i class="el-icon-video-play"></i>
-                        <template #title>行为识别管理</template>
+                        <template #title>告警中心</template>
+                    </el-menu-item>
+                    <!-- 新增签到菜单选项 -->
+                    <el-menu-item index="checkin">
+                        <i class="el-icon-check"></i>
+                        <span>签到</span>
                     </el-menu-item>
                 </el-menu>
             </el-aside>
@@ -182,8 +187,8 @@
                     </el-card>
                 </div>
 
-                <!-- 行为识别管理 -->
-                <!-- 行为识别 -->
+                <!-- 告警中心管理 -->
+                <!-- 告警内容 -->
 
                 <div v-if="activeMenu === 'behaviorRecognition'">
                     <el-card shadow="hover">
@@ -198,16 +203,49 @@
                             <el-table-column prop="employeeName" label="用户名" />
                             <el-table-column prop="behavior" label="行为" />
                             <el-table-column prop="time" label="识别时间" />
+                            <el-table-column label="操作" width="180">
+                              <template #default="{ row }">
+                                  <el-button size="mini" @click="openBehaviorDetail(row)">详情</el-button>
+                                  <el-button size="mini" type="danger" @click="deleteBehavior(row.id)">删除</el-button>
+                              </template>
+                            </el-table-column>
                         </el-table>
 
                         <!-- 分页 -->
-
                         <div class="pagination-container">
                             <el-pagination background layout="total, prev, pager, next, jumper"
                                 :current-page="behaviorPage.page" :page-size="behaviorPage.size"
                                 :total="behaviorPage.total" @current-change="handleBehaviorPageChange" />
                         </div>
                     </el-card>
+                     <!-- 添加行为识别详情对话框 -->
+                    <el-dialog title="行为识别详情" v-model="behaviorDetailDialog" width="600px">
+                             <div class="behavior-detail">
+                                  <div class="detail-item">
+                                            <span class="label">用户名：</span>
+                                            <span class="value">{{ currentBehavior.employeeName }}</span>
+                                  </div>
+                                  <div class="detail-item">
+                                            <span class="label">行为：</span>
+                                            <span class="value">{{ currentBehavior.behavior }}</span>
+                                  </div>
+                                  <div class="detail-item">
+                                            <span class="label">识别时间：</span>
+                                            <span class="value">{{ currentBehavior.time }}</span>
+                                  </div>
+                                  <div class="detail-item">
+                                            <span class="label">详情：</span>
+                                            <span class="value">{{ currentBehavior.details }}</span>
+                                  </div>
+                                  <div class="detail-image">
+                                             <span class="label">截图：</span>
+                                             <img :src="currentBehavior.imageUrl" alt="行为截图" class="behavior-image" />
+                                  </div>
+                             </div>
+                             <template #footer>
+                                        <el-button @click="behaviorDetailDialog = false">关闭</el-button>
+                             </template>
+                    </el-dialog>
                 </div>
             </el-main>
         </el-container>
@@ -237,7 +275,9 @@ const menuMap = {
     correction: '补签管理',
     monitor: '实时监测',
     zoneDetection: '目标检测',
-    behaviorRecognition: '行为识别管理'
+    behaviorRecognition: '告警中心',
+    //新增签到菜单映射
+    checkin: '签到'
 }
 
 /** 分页状态 **/
@@ -275,6 +315,16 @@ const userFormRules = {
     ],
     role: [{ required: true, message: '请选择角色', trigger: 'change' }]
 }
+//告警响应
+const behaviorDetailDialog = ref(false)
+const currentBehavior = reactive({
+    id: null,
+    employeeName: '',
+    behavior: '',
+    time: '',
+    details: '',
+    imageUrl: ''
+})
 
 /** 摄像头 **/
 const videoRef = ref(null)
@@ -354,7 +404,16 @@ function handleBehaviorPageChange(page) {
     fetchRecognitions()
 }
 
-
+// 打开行为识别详情对话框
+function openBehaviorDetail(row) {
+    currentBehavior.id = row.id
+    currentBehavior.employeeName = row.employeeName
+    currentBehavior.behavior = row.behavior
+    currentBehavior.time = row.time
+    currentBehavior.details = row.details
+    currentBehavior.imageUrl = row.imageUrl || '/default-behavior-image.jpg' // 如果没有图片URL，使用默认图片
+    behaviorDetailDialog.value = true
+}
 /** 提交补签 **/
 async function submitMakeup() {
     try {
@@ -395,6 +454,17 @@ async function deleteUser(id) {
         await http.delete(`/users/${id}`)
         ElMessage.success('删除成功')
         fetchUsers()
+    } catch {
+        ElMessage.error('删除失败')
+    }
+}
+
+// 删除行为识别记录
+async function deleteBehavior(id) {
+    try {
+        await http.delete(`/behaviorRecognition/${id}`)
+        ElMessage.success('删除成功')
+        fetchRecognitions() // 重新获取数据
     } catch {
         ElMessage.error('删除失败')
     }
@@ -476,6 +546,11 @@ watch(activeMenu, val => {
     if (val === 'records') fetchRecords()
     if (val === 'monitor') initCamera()
     if (val === 'behaviorRecognition') fetchRecognitions()
+    //新增签到菜单切换逻辑
+    if (val === 'checkin') {
+        // 这里可以添加点击签到菜单后的逻辑，例如跳转到签到页面
+        router.push('/index') // 假设签到页面路由为 /index
+    }
 })
 
 onMounted(async () => {
@@ -560,5 +635,39 @@ onMounted(async () => {
 
 .correction-card {
     max-width: 400px;
+}
+/* 添加样式 */
+.behavior-detail {
+    padding: 20px;
+}
+
+.detail-item {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.detail-item .label {
+    font-weight: bold;
+    width: 100px;
+    flex-shrink: 0;
+}
+
+.detail-image {
+    margin-top: 20px;
+}
+
+.detail-image .label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.behavior-image {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    border: 1px solid #ddd;
+    border-radius: 4px;
 }
 </style>
