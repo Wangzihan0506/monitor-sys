@@ -47,13 +47,13 @@ onMounted(async () => {
       detectFrame()
     }
   } else {
-    video.value.addEventListener('loadeddata', () => {
+  video.value.addEventListener('loadeddata', () => {
       console.log('video loadeddata')
-      if (!isDetecting) {
-        isDetecting = true
-        detectFrame()
-      }
-    })
+    if (!isDetecting) {
+      isDetecting = true
+      detectFrame()
+    }
+  })
   }
 })
 
