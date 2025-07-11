@@ -1,5 +1,3 @@
-# fake_behaviors.py
-
 # TODO: 这里原本用于生成假行为记录，后续请接入真实后端行为识别逻辑。
 # 真实行为识别数据结构示例：
 # behavior_record = {
@@ -12,4 +10,3 @@
 #     'video': str,            # 可选，行为发生时的视频url
 #     'confidence': float      # 可选，识别置信度
 # }
-       
