@@ -4,7 +4,7 @@
             <!-- 标题区 -->
             <div class="login-header">
                 <h2 class="login-title">
-                    {{ resetPasswordShow ? '忘记密码' : '餐厅员工签到和行为检测管理系统' }}
+                    {{ resetPasswordShow ? '忘记密码' : '餐厅安全监测系统' }}
                 </h2>
                 <p v-if="tipMsg" class="tip-msg" v-html="tipMsg" />
             </div>
@@ -64,7 +64,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { ElNotification } from 'element-plus'
 import http from '@/utils/http'
 
@@ -94,7 +94,6 @@ const rules = {
 
 // 路由实例
 const router = useRouter()
-const route = useRoute()
 
 /**
  * 获取验证码图片
@@ -120,7 +119,7 @@ const login = () => {
         loading.value = true
         try {
             // 向后端发送登录请求
-            const {data} = await http.post(
+            await http.post(
                 '/login/',
                 {
                     username: userParams.value.username,
@@ -128,40 +127,51 @@ const login = () => {
                     verify_code: userParams.value.verify_code
                 },
                 { withCredentials: true }
-            )
-            
+            );
+
+            // --- 核心修改点在这里 ---
+            // 密码验证成功后，给出提示，并跳转到人脸验证页面
             ElNotification({
-                title: `Hi，${new Date().toLocaleTimeString()}，登录成功`,
-                type: 'success'
-            })
-            console.log("route.query:",route.query);
-            
+                title: '密码验证成功',
+                message: '为了您的账户安全，请完成人脸识别二次验证。',
+                type: 'info',
+                duration: 3000
+            });
+
+            // 跳转到人脸登录页面，并携带用户名
+            // 用户名是识别人脸的关键
+            router.push({
+                path: '/face-login',
+                query: { username: userParams.value.username }
+            });
+
+            // 下面的旧跳转逻辑不再需要
+            /*
             const redirectPath = route.query.redirect
                 ? route.query.redirect
                 : (data.role === 'user' ? '/index' : '/admin');
 
-            // 如果还有额外的 queryParams，就一起带上
             if (route.query.queryParams) {
                 router.push({
                     path: redirectPath,
                     query: JSON.parse(decodeURIComponent(route.query.queryParams))
                 });
             } else {
-                // 直接以字符串形式跳转
                 router.push(redirectPath);
             }
+            */
         } catch (err) {
             ElNotification({
                 title: '登录失败',
                 type: 'error',
                 message: err.response?.data?.message || err.message
-            })
-            getVerifyCode()
+            });
+            getVerifyCode();
         } finally {
-            loading.value = false
+            loading.value = false;
         }
-    })
-}
+    });
+};
 
 /**
  * 显示重置密码表单

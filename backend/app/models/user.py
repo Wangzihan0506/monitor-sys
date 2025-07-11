@@ -1,14 +1,9 @@
 # app/models/user.py
 
 from datetime import datetime
-from enum import Enum as PyEnum
-from exts import db
+from app.exts import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-
-class RoleEnum(PyEnum):
-    ADMIN = 'admin'
-    USER  = 'user'
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -17,12 +12,10 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.Text, nullable=False)
-
-    role = db.Column(
-        db.Enum(RoleEnum, name='role_enum'),
-        nullable=False,
-        default=RoleEnum.USER
-    )
+    # --- 新增字段 ---
+    # 人脸特征编码，使用 LargeBinary 存储二进制数据
+    # nullable=True 是必须的，因为用户注册时还没有人脸数据
+    face_encoding = db.Column(db.LargeBinary, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
