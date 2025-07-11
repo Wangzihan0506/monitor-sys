@@ -1,8 +1,7 @@
 # app/models/employee.py
 
 from datetime import datetime
-from exts import db
-from app.models.user import User
+from app.exts import db
 
 from enum import Enum as PyEnum
 
@@ -17,7 +16,7 @@ class Employee(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(128), nullable=False)
     # 存储人脸特征向量（pickle 序列化或二进制流）
-    face_encoding = db.Column(db.LargeBinary, nullable=False)
+    face_encoding = db.Column(db.LargeBinary, nullable=True)
 
     # —— 新增 user_id 外键，与 users 表关联 —— 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
