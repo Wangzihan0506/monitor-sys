@@ -17,11 +17,14 @@
                         <canvas ref="canvasRef" style="display: none;"></canvas>
                     </div>
 
-                    <!-- 签到按钮：首次点击开启摄像头，后续点击拍照并签到 -->
-                    <el-button type="primary" :loading="loading" @click="handleSign">
-                        {{ streaming ? '拍照并签到' : '开启摄像头并签到' }}
-                    </el-button>
-
+                    <!-- 签到按钮居中容器 -->
+                    <div class="center-container">
+                        <!-- 签到按钮：首次点击开启摄像头，后续点击拍照并签到 -->
+                        <el-button type="primary" :loading="loading" @click="handleSign">
+                            {{ streaming ? '拍照并签到' : '开启摄像头并签到' }}
+                        </el-button>
+                    </div>
+                    
                     <!-- 显示签到结果与地址 -->
                     <div v-if="signResult">
                         <el-alert title="签到成功" type="success" :description="signResult" show-icon />
@@ -30,9 +33,15 @@
                     <el-divider />
 
                     <!-- 查看签到记录功能 -->
-                    <el-button type="info" @click="fetchRecords">
+                    <el-button type="info" @click="fetchRecords" class="other-button">
                         查看签到记录
                     </el-button>
+                    
+                    <!-- 新增返回主页按钮 -->
+                    <el-button type="info" @click="goBackHome" class="other-button">
+                        返回主页
+                    </el-button>
+                    
                 </el-card>
 
                 <!-- 历史记录表格 + 分页 -->
@@ -58,7 +67,9 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import http from '@/utils/http'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 // 元素引用
 const videoRef = ref(null)
 const canvasRef = ref(null)
@@ -238,6 +249,11 @@ function handleSizeChange(newSize) {
     fetchRecords(page.value)
 }
 
+// 新增返回主页方法
+function goBackHome() {
+    router.push('/admin')
+}
+
 onMounted(() => {
     initMap()
     // 可选：自动加载第一页记录
@@ -280,8 +296,19 @@ onBeforeUnmount(() => {
     margin-bottom: 12px;
 }
 
+.center-container {
+    display: flex;
+    justify-content: center; /* 水平居中 */
+    margin-top: 12px;
+}
+
 .el-button {
     width: 100%;
+    margin-top: 12px
+}
+
+.other-button {
+    width: 210px;
     margin-top: 12px;
 }
 

@@ -10,20 +10,23 @@ import { ElNotification } from 'element-plus'
  * @param {String} [options.audio] 音频url
  * @param {Number} [options.duration] 持续时间ms
  */
-export function alarmNotify({ title = '告警', message, type = 'error', image = '', audio = '', duration = 4000 }) {
+export function alarmNotify({ title = '告警', message, type = 'error', duration = 4000 }) {
+  let msgContent
+  if (typeof message === 'string') {
+    msgContent = `<div>${message}</div>`
+  } else if (typeof message === 'function') {
+    // VNode/h 传递
+    msgContent = message
+  } else {
+    msgContent = `<div>${String(message)}</div>`
+  }
   ElNotification({
     title,
-    message: () => {
-      return (
-        `<div>${message}</div>` +
-        (image ? `<img src='${image}' alt='告警截图' style='max-width:200px;max-height:120px;margin-top:8px;'/>` : '') +
-        (audio ? `<audio src='${audio}' controls style='margin-top:8px;width:200px;'></audio>` : '')
-      )
-    },
+    message: msgContent,
     type,
     duration,
     position: 'top-right',
-    dangerouslyUseHTMLString: true,
+    dangerouslyUseHTMLString: typeof msgContent === 'string',
     showClose: true,
   })
 } 

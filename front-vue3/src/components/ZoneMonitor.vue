@@ -10,7 +10,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, h } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import * as cocoSsd from '@tensorflow-models/coco-ssd'
 import '@tensorflow/tfjs'
 import { ElMessage } from 'element-plus'
@@ -47,13 +47,13 @@ onMounted(async () => {
       detectFrame()
     }
   } else {
-    video.value.addEventListener('loadeddata', () => {
+  video.value.addEventListener('loadeddata', () => {
       console.log('video loadeddata')
-      if (!isDetecting) {
-        isDetecting = true
-        detectFrame()
-      }
-    })
+    if (!isDetecting) {
+      isDetecting = true
+      detectFrame()
+    }
+  })
   }
 })
 
@@ -127,7 +127,7 @@ async function detectFrame() {
         hasAlarmed = true
         alarmNotify({
           title: '告警',
-          message: h('div', '进入违规区域'),
+          message: '进入违规区域',
           type: 'error',
           duration: 4000
         })
