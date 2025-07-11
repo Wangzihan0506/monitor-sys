@@ -196,6 +196,13 @@
                         <div class="toolbar">
                             <el-date-picker v-model="filter.dateRange" type="daterange" range-separator="至"
                                 start-placeholder="开始日期" end-placeholder="结束日期" />
+                             <el-button
+                                   type="success"
+                                   style="margin-left: 12px"
+                                  :disabled="filter.dateRange.length !== 2"
+                                  @click="generateDailyReport">
+                                  日志生成
+                             </el-button>   
                         </div>
 
                         <!-- 识别结果表格 -->
@@ -255,6 +262,7 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import http from '@/utils/http'
+import axios from 'axios'   // 用于访问 Dify
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import { useRouter } from 'vue-router'
@@ -538,6 +546,49 @@ async function initCamera() {
     } catch {
         ElMessage.error('无法访问摄像头')
     }
+}
+
+/**
+ * 生成并下载日报 PDF
+ * 调用 Dify 工作流：把起止日期作为入参，工作流返回 pdf url
+ */
+async function generateDailyReport() {
+  if (filter.dateRange.length !== 2) return
+
+  const [start, end] = filter.dateRange.map(d => dayjs(d).format('YYYY-MM-DD'))
+
+  try {
+    // 1. 调 Dify 工作流（以流式应用为例，把 workflow 的 endpoint 换成你自己的）
+    const difyRes = await axios.post(
+      'https://api.dify.ai/v1/workflows/YOUR_WORKFLOW_ID/executions',
+      {
+        // 工作流入参，名称必须和你配置的一致
+        inputs: { start_date: start, end_date: end },
+        response_mode: 'blocking',   // 等待执行完返回
+        user: currentUser.username
+      },
+      {
+        headers: { Authorization: `Bearer ${import.meta.env.VITE_DIFY_API_KEY}` }
+      }
+    )
+
+    // 2. 取 pdf url（假设工作流在 outputs 里返回了一个 pdf_url 字段）
+    const { pdf_url: pdfUrl } = difyRes.data.data.outputs
+
+    // 3. 浏览器自动下载
+    const link = document.createElement('a')
+    link.href = pdfUrl
+    link.download = `日报_${start}_${end}.pdf`
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    ElMessage.success('已生成并下载日报')
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('生成失败，请稍后重试')
+  }
 }
 
 /** 监控菜单切换 **/
