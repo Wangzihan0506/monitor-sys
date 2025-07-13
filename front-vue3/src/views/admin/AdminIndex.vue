@@ -1,25 +1,5 @@
 <template>
     <el-container style="height: 100vh;">
-        <!-- 顶部导航栏 -->
-        <!-- <el-header class="header">
-            <div class="header-left">
-                <el-breadcrumb separator="/">
-                    <el-breadcrumb-item>后台管理</el-breadcrumb-item>
-                    <el-breadcrumb-item>{{ menuMap[activeMenu] }}</el-breadcrumb-item>
-                </el-breadcrumb>
-            </div>
-            <div class="header-right">
-                <el-dropdown trigger="click">
-                    <span class="el-dropdown-link">
-                        <el-avatar icon="el-icon-user-solid" size="small"></el-avatar>
-                        {{ currentUser.username }} <i class="el-icon-arrow-down el-icon--small"></i>
-                    </span>
-                    <el-dropdown-menu>
-                        <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
-                    </el-dropdown-menu>
-                </el-dropdown>
-            </div>
-        </el-header> -->
 
         <el-header class="header">
             <div class="header-left">
@@ -62,11 +42,11 @@
                     </el-menu-item>
                     <el-menu-item index="correction">
                         <i class="el-icon-edit-outline"></i>
-                        <span>补签管理</span>
+                        <span>身份检测</span>
                     </el-menu-item>
                     <el-menu-item index="monitor">
                         <i class="el-icon-video-camera"></i>
-                        <span>实时监测</span>
+                        <span>异常监测</span>
                     </el-menu-item>
                     <el-menu-item index="zoneDetection">
                         <i class="el-icon-s-promotion"></i>
@@ -154,24 +134,12 @@
                     </el-card>
                 </div>
 
-                <!-- 补签管理 -->
-                <div v-if="activeMenu === 'correction'">
-                    <el-card shadow="hover" class="correction-card">
-                        <el-form :model="makeupForm" ref="makeupRef" label-width="80px">
-                            <el-form-item label="用户">
-                                <el-select v-model="makeupForm.userId" placeholder="选择用户">
-                                    <el-option v-for="u in users" :key="u.id" :label="u.username" :value="u.id" />
-                                </el-select>
-                            </el-form-item>
-                            <el-form-item label="日期">
-                                <el-date-picker v-model="makeupForm.date" type="datetime" placeholder="选择日期时间" />
-                            </el-form-item>
-                            <el-form-item>
-                                <el-button type="primary" @click="submitMakeup">提交补签</el-button>
-                            </el-form-item>
-                        </el-form>
-                    </el-card>
-                </div>
+                 <div v-if="activeMenu === 'correction'" class="monitor-panel">
+                        <el-card shadow="hover" style="height: 100%;">
+                            <!-- 引入新的身份检测组件 -->
+                            <IdentityDetector />
+                        </el-card>
+                 </div>
 
                 <!-- 实时监测 -->
                 <div v-if="activeMenu === 'monitor'" class="monitor-panel">
@@ -179,7 +147,7 @@
                         <video ref="videoRef" autoplay muted playsinline class="video-preview"></video>
                     </el-card>
                 </div>
-                
+
                 <!-- 目标检测页面 -->
                 <div v-if="activeMenu === 'zoneDetection'" class="monitor-panel">
                     <el-card shadow="hover" style="height: 100%;">
@@ -260,6 +228,7 @@ import dayjs from 'dayjs'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 import ZoneMonitor from '@/components/ZoneMonitor.vue'
+import IdentityDetector from '@/components/IdentityDetector.vue'
 
 /** 当前用户信息 **/
 const currentUser = reactive({ username: '' })
@@ -272,11 +241,10 @@ const activeMenu = ref('users')
 const menuMap = {
     users: '用户管理',
     records: '签到记录',
-    correction: '补签管理',
+    correction: '身份检测',
     monitor: '实时监测',
     zoneDetection: '目标检测',
     behaviorRecognition: '告警中心',
-    //新增签到菜单映射
     checkin: '签到'
 }
 
@@ -290,8 +258,8 @@ const users = ref([])
 const records = ref([])
 const recognitions = ref([])
 
-/** 补签表单 **/
-const makeupForm = reactive({ userId: '', date: null })
+// /** 补签表单 **/
+// const makeupForm = reactive({ userId: '', date: null })
 
 /** 行为识别过滤 **/
 const filter = reactive({ dateRange: [] })
@@ -413,26 +381,6 @@ function openBehaviorDetail(row) {
     currentBehavior.details = row.details
     currentBehavior.imageUrl = row.imageUrl || '/default-behavior-image.jpg' // 如果没有图片URL，使用默认图片
     behaviorDetailDialog.value = true
-}
-/** 提交补签 **/
-async function submitMakeup() {
-    try {
-        console.log("userId:", makeupForm.userId);
-        console.log("date:", makeupForm.date);
-
-
-        await http.post('/attendance/makeup', {
-            userId: makeupForm.userId,
-            // date: makeupForm.date
-            date: dayjs(makeupForm.date).format('YYYY-MM-DD HH:mm:ss')
-        })
-        ElMessage.success('补签成功')
-        makeupForm.userId = ''
-        makeupForm.date = null
-        fetchRecords()
-    } catch {
-        ElMessage.error('补签失败')
-    }
 }
 
 /** 打开编辑用户 **/
