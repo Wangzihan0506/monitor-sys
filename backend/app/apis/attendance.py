@@ -75,23 +75,35 @@ def checkin():
 
 
 @attend_bp.route('/attendance/records', methods=['GET'])
+@login_required  # 建议加上登录保护
 def get_attendance_records():
     """
-    返回所有签到记录，包含员工姓名、签到时间和地址描述。
+    分页获取所有签到记录，包含员工姓名和地址描述。
     """
-    # 1. 拉取所有记录，按时间倒序
-    records = Attendance.query.order_by(Attendance.sign_time.desc()).all()
+    # 1. 获取分页参数
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('size', 10, type=int)
+    except (TypeError, ValueError):
+        return jsonify(success=False, message="分页参数无效"), 400
 
-    # 2. 获取百度地图逆地理编码的 AK（需在配置中设置）
     ak = current_app.config.get('BAIDU_MAP_AK', None)
 
-    result = []
-    for rec in records:
+    # 2. 使用 join 预加载员工信息，避免 N+1 查询，并进行分页
+    pagination = Attendance.query.join(Employee, Attendance.employee_id == Employee.id) \
+        .with_entities(Attendance, Employee.name) \
+        .order_by(Attendance.sign_time.desc()) \
+        .paginate(page=page, per_page=per_page, error_out=False)
+
+    records_with_names = pagination.items
+
+    result_items = []
+    for rec, employee_name in records_with_names:
         lat = rec.latitude
         lng = rec.longitude
         address = None
 
-        # 3. 调用百度地图逆地理编码（仅当 lat/lng 不为 None 时）
+        # 3. 只有在需要时才调用外部 API
         if ak and lat is not None and lng is not None:
             try:
                 resp = requests.get(
@@ -102,36 +114,43 @@ def get_attendance_records():
                         'coordtype': 'wgs84ll',
                         'location': f'{lat},{lng}'
                     },
-                    timeout=3
+                    timeout=2  # 外部API调用超时不宜过长
                 )
+                resp.raise_for_status()  # 如果请求失败 (如4xx, 5xx)，会抛出异常
                 data = resp.json()
                 if data.get('status') == 0:
-                    comp = data['result'].get('addressComponent', {})
-                    street = data['result'].get('sematic_description')
-                    if street:
-                        address = street
-                    else:
-                        address = data['result'].get('formatted_address') or comp.get('district')
-            except Exception:
-                # 网络或解析异常，忽略，后面有 fallback
+                    address = data['result'].get('sematic_description') or \
+                              data['result'].get('formatted_address')
+            except requests.exceptions.RequestException as e:
+                # 捕获网络相关的错误
+                print(f"请求百度地图API失败: {e}")
                 address = None
 
-        # 4. fallback：如果没有拿到地址，再根据坐标或直接标记未知
+        # Fallback 逻辑
         if not address:
             if lat is not None and lng is not None:
                 address = f"经度:{lng:.6f}, 纬度:{lat:.6f}"
             else:
-                address = "地址未知"
+                address = "地址信息未知"
 
-        result.append({
-            'employeeName': rec.employee.name,
+        result_items.append({
+            'employeeName': employee_name,  # 直接使用 join 查出的名字
             'signTime': rec.sign_time.strftime('%Y-%m-%d %H:%M:%S'),
             'address': address,
-            "check_type":rec.check_type.value
+            "check_type": rec.check_type.value if hasattr(rec.check_type, 'value') else str(rec.check_type)
         })
 
-    return jsonify(result), 200
-
+    # 4。返回结构化的、符合前端期望的 JSON 对象
+    return jsonify({
+        "success": True,
+        "message": "签到记录获取成功",
+        "data": {
+            "items": result_items,
+            "page": pagination.page,
+            "pages": pagination.pages,
+            "total": pagination.total
+        }
+    }), 200
 @attend_bp.route('/attendance/records/user', methods=['GET'])
 @login_required
 def get_user_attendance_records():

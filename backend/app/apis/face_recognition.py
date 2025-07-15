@@ -10,8 +10,7 @@ from config import BASE_DIR
 from app.models.user import User
 
 face_recognition_bp = Blueprint('face_recognition_bp', __name__)
-MODEL_NAME = "VGG-Face"
-# 【调试修改1】暂时放宽阈值，更容易匹配成功
+MODEL_NAME = "Facenet512"
 THRESHOLD = 0.80
 logging.info(f"【调试模式】人脸识别阈值已放宽至: {THRESHOLD}")
 
@@ -57,7 +56,7 @@ def recognize_batch():
             file.save(temp_image_path)
 
             embedding_objs = DeepFace.represent(img_path=temp_image_path, model_name=MODEL_NAME,
-                                                detector_backend='mtcnn', enforce_detection=False)
+                                                detector_backend='retinaface', enforce_detection=False)
             target_embedding = embedding_objs[0]['embedding']
 
             if not known_faces:

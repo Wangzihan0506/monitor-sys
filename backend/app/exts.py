@@ -5,7 +5,6 @@ from flask_caching import Cache
 from flask_wtf import CSRFProtect
 from flask_avatars import Avatars
 from flask_jwt_extended import JWTManager
-from flask_cors import CORS
 from flask_login import LoginManager
 
 db = SQLAlchemy()
@@ -14,5 +13,4 @@ cache = Cache()
 csrf = CSRFProtect()
 avatars = Avatars()
 jwt = JWTManager()
-cors = CORS()
 login_manager = LoginManager()

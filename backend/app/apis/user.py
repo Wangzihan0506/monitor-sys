@@ -1,11 +1,11 @@
 #用户管理接口
 from flask import Blueprint, jsonify, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.exts import db
 from .. import Employee, User
 
-
 user_bp = Blueprint('user', __name__)
+
 
 @user_bp.route("/users", methods=["GET"])
 @login_required
@@ -14,13 +14,20 @@ def list_users():
     列出所有用户
     """
     users = User.query.order_by(User.created_at.desc()).all()
-    return jsonify([
+
+    serialized_users = [
         {
             "id": u.id,
             "username": u.username,
             "email": u.email
         } for u in users
-    ]), 200
+    ]
+
+    return jsonify({
+        "success": True,
+        "message": "用户列表获取成功",
+        "data": serialized_users  # 将用户列表放在 data 字段下
+    }), 200
 
 
 @user_bp.route("/users", methods=["POST"])
@@ -104,3 +111,22 @@ def delete_user(user_id):
     db.session.commit()
 
     return jsonify({"message": "删除成功"}), 200
+
+
+@user_bp.route("/current_user/", methods=["GET"])  # <-- URL 与前端请求完全匹配！
+@login_required  # 这个装饰器确保了只有登录用户才能访问
+def get_current_user_info():
+    """
+    获取当前已登录用户的信息
+    """
+    return jsonify({
+        "success": True,
+        "message": "当前用户信息获取成功",
+        "data": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "email": current_user.email,
+            "is_admin": getattr(current_user, 'is_admin', False),  # 使用 getattr 更安全
+            "created_at": current_user.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+    }), 200
